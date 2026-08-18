@@ -5,7 +5,7 @@ import time
 # Page configuration
 st.set_page_config(page_title="SnapURL - Premium SaaS", page_icon="⚡", layout="wide")
 
-# Initialize session state for tracking and input fields
+# Initialize session state for tracking data
 if 'link_history' not in st.session_state:
     st.session_state.link_history = []
 if 'click_counts' not in st.session_state:
@@ -13,10 +13,17 @@ if 'click_counts' not in st.session_state:
 if 'latest_short_url' not in st.session_state:
     st.session_state.latest_short_url = None
 
+# Custom callback function to clear input fields safely from memory
+def clear_form_fields():
+    st.session_state.url_vault = st.session_state.input_url
+    st.session_state.alias_vault = st.session_state.input_alias
+    st.session_state.input_url = ""
+    st.session_state.input_alias = ""
+
 # Sidebar Information
 with st.sidebar:
     st.markdown("### ⚡ SnapURL Enterprise")
-    st.info("💡 Pro Tip for Buyers: Frontend handles instant state clearing via session triggers for ultra-smooth UX.")
+    st.info("💡 Pro Tip for Buyers: Form engine utilizes state-callback structures to guarantee instant input clearing upon click triggers.")
     st.markdown("---")
     st.markdown("**Core Architecture:**")
     st.markdown("- **Engine:** Python 3.14 + Streamlit")
@@ -31,45 +38,50 @@ tab_shorten, tab_analytics, tab_history = st.tabs(["🚀 Shorten Workspace", "�
 with tab_shorten:
     st.subheader("Create a Trackable Smart Link")
     
-    # Using key parameters to allow software-driven clearing
+    # State-backed input boxes that can be emptied on command
     long_url = st.text_input("Target URL (Destination):", placeholder="https://example.com", key="input_url")
     custom_alias = st.text_input("Custom Endpoint Alias (Optional):", placeholder="promo2026", key="input_alias")
 
-    if st.button("Generate Smart Link", type="primary"):
-        if long_url.strip() == "":
+    # The button calls the clear script simultaneously via on_click handler
+    if st.button("Generate Smart Link", type="primary", on_click=clear_form_fields):
+        # Retrieve the data safely from the temporary state vault
+        target_url = st.session_state.get('url_vault', '').strip()
+        target_alias = st.session_state.get('alias_vault', '').strip()
+
+        if target_url == "":
             st.error("Please enter a valid destination URL first.")
         else:
             with st.spinner("Provisioning secure endpoint..."):
                 try:
                     shortener = pyshorteners.Shortener()
-                    base_short_url = shortener.tinyurl.short(long_url)
+                    base_short_url = shortener.tinyurl.short(target_url)
                     
-                    if custom_alias.strip():
-                        clean_alias = custom_alias.strip().replace(" ", "-")
+                    if target_alias:
+                        clean_alias = target_alias.replace(" ", "-")
                         final_url = f"{base_short_url}/{clean_alias}"
                     else:
                         final_url = base_short_url
                     
-                    time.sleep(0.4)
+                    time.sleep(0.3)
                     
-                    # Log data BEFORE clearing inputs
+                    # Log data to analytics
                     timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
                     st.session_state.link_history.append({
                         "time": timestamp,
-                        "original": long_url,
+                        "original": target_url,
                         "shortened": final_url,
-                        "alias": custom_alias if custom_alias else "None"
+                        "alias": target_alias if target_alias else "None"
                     })
                     st.session_state.click_counts[final_url] = st.session_state.click_counts.get(final_url, 0) + 1
                     st.session_state.latest_short_url = final_url
                     
-                    # Force session clear trigger for input boxes
+                    # Trigger visual refresh to lock clear state
                     st.rerun()
                     
                 except Exception as e:
                     st.error("API Handshake Error: Connection timed out. Please try again.")
 
-    # Permanently display the generated link even after input boxes clear out
+    # Permanently preserve display block even when input forms are fully reset
     if st.session_state.latest_short_url:
         st.success("🎉 Enterprise Endpoint Generated Successfully!")
         st.code(st.session_state.latest_short_url, language="text")
@@ -91,3 +103,8 @@ with tab_history:
     else:
         st.dataframe(st.session_state.link_history, use_container_width=True)
 
+
+
+
+
+        
