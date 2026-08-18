@@ -5,7 +5,7 @@ import time
 # Page configuration
 st.set_page_config(page_title="SnapURL - Premium SaaS", page_icon="⚡", layout="wide")
 
-# Initialize session state for tracking data
+# Initialize session state for tracking data and clearing functions
 if 'link_history' not in st.session_state:
     st.session_state.link_history = []
 if 'click_counts' not in st.session_state:
@@ -13,17 +13,17 @@ if 'click_counts' not in st.session_state:
 if 'latest_short_url' not in st.session_state:
     st.session_state.latest_short_url = None
 
-# Custom callback function to clear input fields safely from memory
-def clear_form_fields():
-    st.session_state.url_vault = st.session_state.input_url
-    st.session_state.alias_vault = st.session_state.input_alias
-    st.session_state.input_url = ""
-    st.session_state.input_alias = ""
+# Mapped callback script to empty BOTH inputs simultaneously from system cache
+def reset_workspace_inputs():
+    st.session_state.vault_long_url = st.session_state.get('input_url', '')
+    st.session_state.vault_custom_alias = st.session_state.get('input_alias', '')
+    st.session_state['input_url'] = ""
+    st.session_state['input_alias'] = ""
 
 # Sidebar Information
 with st.sidebar:
     st.markdown("### ⚡ SnapURL Enterprise")
-    st.info("💡 Pro Tip for Buyers: Form engine utilizes state-callback structures to guarantee instant input clearing upon click triggers.")
+    st.info("💡 Pro Tip for Buyers: Form state tracking is completely decoupled to ensure zero-lag workspace caching.")
     st.markdown("---")
     st.markdown("**Core Architecture:**")
     st.markdown("- **Engine:** Python 3.14 + Streamlit")
@@ -38,15 +38,14 @@ tab_shorten, tab_analytics, tab_history = st.tabs(["🚀 Shorten Workspace", "�
 with tab_shorten:
     st.subheader("Create a Trackable Smart Link")
     
-    # State-backed input boxes that can be emptied on command
-    long_url = st.text_input("Target URL (Destination):", placeholder="https://example.com", key="input_url")
-    custom_alias = st.text_input("Custom Endpoint Alias (Optional):", placeholder="promo2026", key="input_alias")
+    # State-backed session fields connected directly to the reset callback switch
+    st.text_input("Target URL (Destination):", placeholder="https://example.com", key="input_url")
+    st.text_input("Custom Endpoint Alias (Optional):", placeholder="promo2026", key="input_alias")
 
-    # The button calls the clear script simultaneously via on_click handler
-    if st.button("Generate Smart Link", type="primary", on_click=clear_form_fields):
-        # Retrieve the data safely from the temporary state vault
-        target_url = st.session_state.get('url_vault', '').strip()
-        target_alias = st.session_state.get('alias_vault', '').strip()
+    # Single button trigger that forces memory clean execution instantly
+    if st.button("Generate Smart Link", type="primary", on_click=reset_workspace_inputs):
+        target_url = st.session_state.get('vault_long_url', '').strip()
+        target_alias = st.session_state.get('vault_custom_alias', '').strip()
 
         if target_url == "":
             st.error("Please enter a valid destination URL first.")
@@ -62,9 +61,9 @@ with tab_shorten:
                     else:
                         final_url = base_short_url
                     
-                    time.sleep(0.3)
+                    time.sleep(0.2)
                     
-                    # Log data to analytics
+                    # Store tracking log inside state memory vault
                     timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
                     st.session_state.link_history.append({
                         "time": timestamp,
@@ -75,13 +74,12 @@ with tab_shorten:
                     st.session_state.click_counts[final_url] = st.session_state.click_counts.get(final_url, 0) + 1
                     st.session_state.latest_short_url = final_url
                     
-                    # Trigger visual refresh to lock clear state
                     st.rerun()
                     
                 except Exception as e:
                     st.error("API Handshake Error: Connection timed out. Please try again.")
 
-    # Permanently preserve display block even when input forms are fully reset
+    # Retain standard link container view separate from input tracking fields
     if st.session_state.latest_short_url:
         st.success("🎉 Enterprise Endpoint Generated Successfully!")
         st.code(st.session_state.latest_short_url, language="text")
@@ -102,9 +100,3 @@ with tab_history:
         st.info("Data vault is currently empty.")
     else:
         st.dataframe(st.session_state.link_history, use_container_width=True)
-
-
-
-
-
-        
