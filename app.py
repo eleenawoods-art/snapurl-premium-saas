@@ -12,6 +12,8 @@ if 'click_counts' not in st.session_state:
     st.session_state.click_counts = {}
 if 'latest_short_url' not in st.session_state:
     st.session_state.latest_short_url = None
+if 'show_link_container' not in st.session_state:
+    st.session_state.show_link_container = False
 
 # Mapped callback script to empty BOTH inputs simultaneously from system cache
 def reset_workspace_inputs():
@@ -19,11 +21,14 @@ def reset_workspace_inputs():
     st.session_state.vault_custom_alias = st.session_state.get('input_alias', '')
     st.session_state['input_url'] = ""
     st.session_state['input_alias'] = ""
+    # Reset container view states
+    st.session_state.latest_short_url = None
+    st.session_state.show_link_container = False
 
 # Sidebar Information
 with st.sidebar:
     st.markdown("### ⚡ SnapURL Enterprise")
-    st.info("💡 Pro Tip for Buyers: Form state tracking is completely decoupled to ensure zero-lag workspace caching.")
+    st.info("💡 Pro Tip for Buyers: App triggers a temporary state component that auto-vanishes after a strict 12-second cooldown for maximum UX cleanliness.")
     st.markdown("---")
     st.markdown("**Core Architecture:**")
     st.markdown("- **Engine:** Python 3.14 + Streamlit")
@@ -72,18 +77,33 @@ with tab_shorten:
                         "alias": target_alias if target_alias else "None"
                     })
                     st.session_state.click_counts[final_url] = st.session_state.click_counts.get(final_url, 0) + 1
+                    
+                    # Set short URL and trigger visibility
                     st.session_state.latest_short_url = final_url
+                    st.session_state.show_link_container = True
                     
                     st.rerun()
                     
                 except Exception as e:
                     st.error("API Handshake Error: Connection timed out. Please try again.")
 
-    # Retain standard link container view separate from input tracking fields
-    if st.session_state.latest_short_url:
-        st.success("🎉 Enterprise Endpoint Generated Successfully!")
+    # Display block with built-in auto-vanishing functionality (Set to 12 seconds)
+    if st.session_state.show_link_container and st.session_state.latest_short_url:
+        st.success("🎉 Enterprise Endpoint Generated Successfully! (Disappearing in 12 seconds...)")
         st.code(st.session_state.latest_short_url, language="text")
+        
+        # Countdown placeholder to let user copy link before it vanishes
+        countdown_placeholder = st.empty()
+        for remaining in range(12, 0, -1):
+            countdown_placeholder.caption(f"⏳ Dynamic UI refreshing in {remaining} seconds...")
+            time.sleep(1)
+            
+        # Reset visibility state and clear display
+        st.session_state.show_link_container = False
+        st.session_state.latest_short_url = None
+        st.rerun()
 
+# [Analytics and History tabs remain identical to keep data logged properly]
 with tab_analytics:
     st.subheader("Real-Time Traffic Dashboard")
     if not st.session_state.link_history:
@@ -100,3 +120,4 @@ with tab_history:
         st.info("Data vault is currently empty.")
     else:
         st.dataframe(st.session_state.link_history, use_container_width=True)
+
