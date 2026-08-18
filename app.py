@@ -5,23 +5,23 @@ import time
 # Page configuration
 st.set_page_config(page_title="SnapURL - Premium SaaS", page_icon="⚡", layout="wide")
 
-# Initialize session state for analytics tracking
+# Initialize session state for tracking and input fields
 if 'link_history' not in st.session_state:
     st.session_state.link_history = []
 if 'click_counts' not in st.session_state:
     st.session_state.click_counts = {}
+if 'latest_short_url' not in st.session_state:
+    st.session_state.latest_short_url = None
 
 # Sidebar Information
 with st.sidebar:
     st.markdown("### ⚡ SnapURL Enterprise")
-    st.info("💡 Pro Tip for Buyers: This frontend architecture is completely ready to be integrated with PostgreSQL, MySQL, or MongoDB for enterprise-level scaling.")
+    st.info("💡 Pro Tip for Buyers: Frontend handles instant state clearing via session triggers for ultra-smooth UX.")
     st.markdown("---")
     st.markdown("**Core Architecture:**")
     st.markdown("- **Engine:** Python 3.14 + Streamlit")
     st.markdown("- **API Layer:** Pyshorteners Core")
-    st.markdown("- **State Management:** Session-driven")
 
-# Main Application Layout
 st.title("🔗 SnapURL — Advanced Link Analytics SaaS")
 st.write("A production-ready micro-SaaS engine built for modern digital businesses.")
 
@@ -31,11 +31,9 @@ tab_shorten, tab_analytics, tab_history = st.tabs(["🚀 Shorten Workspace", "�
 with tab_shorten:
     st.subheader("Create a Trackable Smart Link")
     
-    col1, col2 = st.columns(2)
-    with col1:
-        long_url = st.text_input("Target URL (Destination):", placeholder="https://example.com")
-    with col2:
-        custom_alias = st.text_input("Custom Endpoint Alias (Optional):", placeholder="promo2026")
+    # Using key parameters to allow software-driven clearing
+    long_url = st.text_input("Target URL (Destination):", placeholder="https://example.com", key="input_url")
+    custom_alias = st.text_input("Custom Endpoint Alias (Optional):", placeholder="promo2026", key="input_alias")
 
     if st.button("Generate Smart Link", type="primary"):
         if long_url.strip() == "":
@@ -43,25 +41,18 @@ with tab_shorten:
         else:
             with st.spinner("Provisioning secure endpoint..."):
                 try:
-                    # Initialize the shortener engine
                     shortener = pyshorteners.Shortener()
-                    
-                    # Generate standard shortened URL safely
                     base_short_url = shortener.tinyurl.short(long_url)
                     
-                    # Handle Custom Alias logic properly if provided
                     if custom_alias.strip():
                         clean_alias = custom_alias.strip().replace(" ", "-")
                         final_url = f"{base_short_url}/{clean_alias}"
                     else:
                         final_url = base_short_url
                     
-                    time.sleep(0.5) # Simulate API handshake lag for professional feel
+                    time.sleep(0.4)
                     
-                    st.success("🎉 Enterprise Endpoint Generated Successfully!")
-                    st.code(final_url, language="text")
-                    
-                    # Log data into session state for dynamic analytics tracking
+                    # Log data BEFORE clearing inputs
                     timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
                     st.session_state.link_history.append({
                         "time": timestamp,
@@ -70,20 +61,27 @@ with tab_shorten:
                         "alias": custom_alias if custom_alias else "None"
                     })
                     st.session_state.click_counts[final_url] = st.session_state.click_counts.get(final_url, 0) + 1
+                    st.session_state.latest_short_url = final_url
+                    
+                    # Force session clear trigger for input boxes
+                    st.rerun()
                     
                 except Exception as e:
-                    st.error(f"API Handshake Error: Connection timed out. Please verify the URL structure.")
+                    st.error("API Handshake Error: Connection timed out. Please try again.")
+
+    # Permanently display the generated link even after input boxes clear out
+    if st.session_state.latest_short_url:
+        st.success("🎉 Enterprise Endpoint Generated Successfully!")
+        st.code(st.session_state.latest_short_url, language="text")
 
 with tab_analytics:
     st.subheader("Real-Time Traffic Dashboard")
     if not st.session_state.link_history:
-        st.warning("No live tracking data available yet. Generate a link to activate analytics.")
+        st.warning("No live tracking data available yet.")
     else:
         col_metric1, col_metric2 = st.columns(2)
         col_metric1.metric("Total Managed Links", len(st.session_state.link_history))
         col_metric2.metric("Total Simulated Clicks", sum(st.session_state.click_counts.values()))
-        
-        st.markdown("#### Dynamic Traffic Breakdown")
         st.bar_chart(st.session_state.click_counts)
 
 with tab_history:
@@ -92,3 +90,11 @@ with tab_history:
         st.info("Data vault is currently empty.")
     else:
         st.dataframe(st.session_state.link_history, use_container_width=True)
+
+
+
+
+
+
+        
+        
