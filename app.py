@@ -91,10 +91,3 @@ with tab_history:
     else:
         st.dataframe(st.session_state.link_history, use_container_width=True)
 
-
-
-
-
-
-        
-        
